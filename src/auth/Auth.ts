@@ -4,22 +4,22 @@ import jwt from "jsonwebtoken";
 import { Account, fetchfile } from "../account/azure";
 import { Router } from "express";
 import z from "zod"
-import { error } from "console";
+
 const prisma=new PrismaClient();
 const  router=Router();
 const user=z.object({
     name:z.string(),
-    email:z.string().email({message:"Format is not correct"}),
-    password:z.string().min(8,{message:"Must be minimum 8 "}).max(10,{message:"Must be maximum 10"})
+    email:z.string().email({message:"Email Format is not correct"}),
+    password:z.string().min(8,{message:"Password Must be minimum 8 "}).max(10,{message:"Password Must be maximum 10"})
 })
 router.post("/signup",async(req:any,res:any)=>{
    const valid=user.safeParse(req.body);
    if(!valid.success){
-    return res.json({error:valid.error.errors});
+    return res.status(400).json({message:valid.error.errors[0].message});
    }
     const {name,email,password}=valid.data;
     if(!name||!email||!password){
-        res.json({message:"Kindly provide the required fields"});
+        res.status(400).json({message:"Kindly provide the required fields"});
     }
     const unique=await prisma.user.findFirst({
         where:{
@@ -27,7 +27,7 @@ router.post("/signup",async(req:any,res:any)=>{
         }
     })
     if(unique){
-        res.json({message:"Email alredy existt"});
+        return res.status(400).json({message:"Email alredy existt"});
     }
     const bycrpt=await bcrypt.genSalt(10);
     const hashpassword=await bcrypt.hash(password,bycrpt);
@@ -39,7 +39,7 @@ router.post("/signup",async(req:any,res:any)=>{
         }
     }) 
    const jwtoken=jwt.sign({id:newuser.id},process.env.JWT_SECRET||"jwtscet");
-   res.json({message:jwtoken});
+   return res.status(200).json({token:jwtoken});
 })
 router.post("/login",async(req:any,res:any)=>{
     const {email,password}=req.body;
@@ -61,17 +61,17 @@ router.post("/login",async(req:any,res:any)=>{
         return;
     }
     const token=jwt.sign({id:Email?.id},process.env.JWT_TOKEN||"jwtokenn");
-    res.json({token});
+    res.json({token:token});
 })
 router.post("/codebase",async(req:any,res:any)=>{
-    const {language,email}=req.body;
+    const {language,id}=req.body;
     if(!language){
         res.json({message:"No language found"});
         return;
     }
     const user=await prisma.user.findFirst({
         where:{
-            email,
+            id,
         }
     })
     if(!user){

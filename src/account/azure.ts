@@ -11,7 +11,6 @@ export const Account = async (language:string,userid:string) => {
     }
     const sourceFolder = `${language}/`;
     const destinationFolder = `User/${userid}/${language}/`;
-
     const containerClient = new ContainerClient(sasUrl); 
     try {
         const  newfolder=containerClient.getBlockBlobClient(destinationFolder);
@@ -34,16 +33,21 @@ export const Account = async (language:string,userid:string) => {
 };
 export const fetchfile=async(language:string,userid:string)=>{
    const sasurl=process.env.BLOBSASURL;
-
    if(!sasurl){
     return; 
    }
    const container=new ContainerClient(sasurl);
    const folder=`User/${userid}/${language}/`;
-   const blobs=container.listBlobsFlat({prefix:folder});
-   console.log(folder);
-   
+   const blobs=container.listBlobsFlat({prefix:folder});    
+   console.log(blobs); 
    for await(const blob of blobs){
+          console.log("blobname",blob.name);
+          if(blob.name==`User/${userid}/${language}/`){
+            console.log("leee");
+              container.deleteBlob(blob.name);
+              continue;
+          }
+          console.log("check222");
           const blobclient=container.getBlobClient(blob.name);
           console.log("blobclient",blob.name);
           const download=await blobclient.download();
